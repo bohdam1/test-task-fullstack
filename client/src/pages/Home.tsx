@@ -196,7 +196,7 @@ const Home: React.FC = () => {
         ))}
       </ul>
 
-      {/* --- Пагінація --- */}
+      
       <div style={{ display: "flex", justifyContent: "center", marginTop: "20px", gap: "10px" }}>
         <Button onClick={handlePrevPage} disabled={currentPage === 1}>
           Попередня

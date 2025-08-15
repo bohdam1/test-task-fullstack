@@ -21,19 +21,19 @@ const AdDetails: React.FC = () => {
   const [price, setPrice] = useState("");
   const [existingImages, setExistingImages] = useState<string[]>([]);
   const [newImages, setNewImages] = useState<File[]>([]);
+  const [isOwner, setIsOwner] = useState(false);
 
-  // Завантажуємо профіль користувача, якщо ще не завантажений
+  // Завантажуємо профіль, якщо ще не отриманий
   useEffect(() => {
-    if (!profile && profileStatus === "idle") {
-      dispatch(getProfile());
-    }
-  }, [dispatch, profile, profileStatus]);
+    dispatch(getProfile());
+  }, [dispatch]);
 
   // Завантажуємо оголошення
   useEffect(() => {
     if (id) dispatch(fetchAdById(id));
   }, [id, dispatch]);
 
+  // Синхронізуємо поля при зміні оголошення
   useEffect(() => {
     if (currentAd) {
       setTitle(currentAd.title || "");
@@ -45,15 +45,27 @@ const AdDetails: React.FC = () => {
     }
   }, [currentAd]);
 
-  const handleImageRemove = (index: number) => setExistingImages(prev => prev.filter((_, i) => i !== index));
+  // Визначаємо, чи користувач власник оголошення
+  useEffect(() => {
+    if (profile && currentAd) {
+      setIsOwner(profile.id === currentAd.userId);
+    }
+  }, [profile, currentAd]);
+
+  const handleImageRemove = (index: number) =>
+    setExistingImages(prev => prev.filter((_, i) => i !== index));
 
   const handleNewImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-    setNewImages(prev => [...prev, ...Array.from(files)]);
-  };
+  const files = e.target.files;
+  if (!files) return;
 
-  const handleNewImageRemove = (index: number) => setNewImages(prev => prev.filter((_, i) => i !== index));
+  // явне приведення до масиву File[]
+  const filesArray = Array.from(files) as File[];
+  setNewImages(prev => [...prev, ...filesArray]);
+};
+
+  const handleNewImageRemove = (index: number) =>
+    setNewImages(prev => prev.filter((_, i) => i !== index));
 
   const handleSave = async () => {
     if (!id) return;
@@ -64,8 +76,10 @@ const AdDetails: React.FC = () => {
     formData.append("city", city);
     formData.append("price", price);
 
-    existingImages.forEach(img => formData.append("images", img));
+    // Нові файли
     newImages.forEach(file => formData.append("images", file));
+    // Старі зображення
+    formData.append("existingImages", JSON.stringify(existingImages));
 
     try {
       await dispatch(updateAd({ id, formData })).unwrap();
@@ -79,9 +93,7 @@ const AdDetails: React.FC = () => {
 
   const handleDelete = async () => {
     if (!id) return;
-
     if (!window.confirm("Ви впевнені, що хочете видалити це оголошення?")) return;
-
     try {
       await dispatch(deleteAd(id)).unwrap();
       navigate("/");
@@ -126,10 +138,12 @@ const AdDetails: React.FC = () => {
           <Typography align="center" mt={2}>{currentAd.description}</Typography>
           <Typography variant="h6" align="center" mt={1}>{currentAd.city} — ${currentAd.price}</Typography>
 
-          <Box mt={2} display="flex" gap={1} justifyContent="center">
-            <Button variant="contained" color="primary" onClick={() => setIsEditing(true)}>Редагувати</Button>
-            <Button variant="contained" color="error" onClick={handleDelete}>Видалити</Button>
-          </Box>
+          {isOwner && (
+            <Box mt={2} display="flex" gap={1} justifyContent="center">
+              <Button variant="contained" color="primary" onClick={() => setIsEditing(true)}>Редагувати</Button>
+              <Button variant="contained" color="error" onClick={handleDelete}>Видалити</Button>
+            </Box>
+          )}
         </>
       ) : (
         <>

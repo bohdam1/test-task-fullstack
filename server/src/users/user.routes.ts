@@ -4,7 +4,7 @@ import { getProfile, updateProfile } from "./user.controller";
 
 const router = Router();
 
-router.get("/profile", getProfile);
+router.get("/profile", authMiddleware,getProfile);
 router.put("/profile", authMiddleware, updateProfile);
 
 export default router;

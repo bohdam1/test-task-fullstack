@@ -28,25 +28,33 @@ const initialState: AdsState = {
 };
 
 
+
 export const fetchAds = createAsyncThunk("ads/fetchAds", async () => {
-  const response = await api.get("/ads");
+  const token = localStorage.getItem("accessToken");
+  const response = await api.get("/ads", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
   return response.data.ads;
 });
-
 
 export const fetchAdById = createAsyncThunk(
   "ads/fetchAdById",
   async (id: string, { rejectWithValue }) => {
     try {
-      const response = await api.get(`/ads/${id}`);
-      
-      return  response.data;
+      const token = localStorage.getItem("accessToken");
+      const response = await api.get(`/ads/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      return response.data;
     } catch (err: any) {
       return rejectWithValue(err.response?.data || "Error");
     }
   }
 );
-
 
 export const createAd = createAsyncThunk(
   "ads/createAd",
@@ -63,7 +71,6 @@ export const createAd = createAsyncThunk(
   }
 );
 
-
 export const updateAd = createAsyncThunk(
   "ads/updateAd",
   async ({ id, formData }: { id: string; formData: FormData }, { rejectWithValue }) => {
@@ -78,7 +85,6 @@ export const updateAd = createAsyncThunk(
     }
   }
 );
-
 
 export const deleteAd = createAsyncThunk(
   "ads/deleteAd",

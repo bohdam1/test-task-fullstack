@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { Ad } from "./ad.model";
 
-// Створення оголошення
+
 export const createAd = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId;
@@ -27,14 +27,14 @@ export const createAd = async (req: Request, res: Response) => {
   }
 };
 
-// Отримання лише оголошень користувача
+
 export const getAds = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).userId;
-    if (!userId) return res.status(401).json({ message: "Not authorized" });
+    const userId = (req as any).userId; // може бути undefined, якщо користувач не авторизований
 
     const { page = 1, limit = 10, category, city, minPrice, maxPrice, search } = req.query;
-    const query: any = { userId };
+
+    const query: any = {}; // прибрали userId
 
     if (category) query.category = category;
     if (city) query.city = city;
@@ -53,8 +53,14 @@ export const getAds = async (req: Request, res: Response) => {
 
     const total = await Ad.countDocuments(query);
 
+    // додаємо поле isOwner для фронтенду
+    const adsWithOwnerFlag = ads.map(ad => ({
+      ...ad.toObject(),
+      isOwner: userId ? ad.userId.toString() === userId : false,
+    }));
+
     res.json({
-      ads,
+      ads: adsWithOwnerFlag,
       page: Number(page),
       totalPages: Math.ceil(total / Number(limit)),
       total
@@ -65,19 +71,43 @@ export const getAds = async (req: Request, res: Response) => {
   }
 };
 
-// Отримання одного оголошення за id (тільки власник)
+
 export const getAdById = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).userId;
-    if (!userId) return res.status(401).json({ message: "Not authorized" });
-
     const ad = await Ad.findById(req.params.id);
     if (!ad) return res.status(404).json({ message: "Ad not found" });
 
-    if (ad.userId.toString() !== userId) {
-      return res.status(403).json({ message: "Not authorized" });
-    }
+    
+    res.json(ad);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+export const updateAd = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).userId;
+    const ad = await Ad.findById(req.params.id);
+    if (!ad) return res.status(404).json({ message: "Ad not found" });
 
+    if (ad.userId.toString() !== userId)
+      return res.status(403).json({ message: "Not authorized" });
+
+    
+    const { title, description, city, price } = req.body;
+    if (title) ad.title = title;
+    if (description) ad.description = description;
+    if (city) ad.city = city;
+    if (price) ad.price = price;
+
+    
+    const existingImages = req.body.existingImages ? JSON.parse(req.body.existingImages) : [];
+    
+    const uploadedFiles = req.files ? (req.files as Express.Multer.File[]).map(f => f.path) : [];
+  
+    ad.images = [...existingImages, ...uploadedFiles];
+
+    await ad.save();
     res.json(ad);
   } catch (err) {
     console.error(err);
@@ -85,50 +115,17 @@ export const getAdById = async (req: Request, res: Response) => {
   }
 };
 
-// Оновлення оголошення (тільки власник)
-export const updateAd = async (req: Request, res: Response) => {
-  try {
-    const userId = (req as any).userId;
-    if (!userId) return res.status(401).json({ message: "Not authorized" });
 
-    const { id } = req.params;
-    const { title, description, city, price, existingImages } = req.body;
-
-    const ad = await Ad.findById(id);
-    if (!ad) return res.status(404).json({ message: "Ad not found" });
-
-    if (ad.userId.toString() !== userId) return res.status(403).json({ message: "Not authorized" });
-
-    const oldImages: string[] = existingImages ? JSON.parse(existingImages) : [];
-    const files = req.files as Express.Multer.File[];
-    const newImages: string[] = files ? files.map(f => f.path) : [];
-
-    ad.images = [...oldImages, ...newImages];
-    ad.title = title;
-    ad.description = description;
-    ad.city = city;
-    ad.price = price;
-
-    await ad.save();
-    res.json(ad);
-  } catch (err: any) {
-    console.error(err);
-    res.status(500).json({ message: err.message });
-  }
-};
-
-// Видалення оголошення (тільки власник)
 export const deleteAd = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId;
-    if (!userId) return res.status(401).json({ message: "Not authorized" });
-
     const ad = await Ad.findById(req.params.id);
     if (!ad) return res.status(404).json({ message: "Ad not found" });
 
-    if (ad.userId.toString() !== userId) return res.status(403).json({ message: "Not authorized" });
+    if (ad.userId.toString() !== userId)
+      return res.status(403).json({ message: "Not authorized" });
 
-    await Ad.findByIdAndDelete(req.params.id);
+    await ad.deleteOne();
     res.json({ message: "Ad deleted" });
   } catch (err) {
     console.error(err);

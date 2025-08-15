@@ -14,8 +14,8 @@ const upload = multer({ storage, limits: { files: 5 } });
 
 
 router.post("/", authMiddleware, upload.array("images", 5), createAd);
-router.get("/", getAds); 
-router.get("/:id", getAdById);
+router.get("/", authMiddleware, getAds); 
+router.get("/:id",authMiddleware, getAdById);
 router.put("/:id", authMiddleware, upload.array("images", 5), updateAd);
 router.delete("/:id", authMiddleware, deleteAd);
 

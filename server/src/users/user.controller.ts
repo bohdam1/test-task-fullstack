@@ -6,6 +6,7 @@ import { Types } from "mongoose";
 export const getProfile = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId; 
+    
     if (!Types.ObjectId.isValid(userId)) {
       return res.status(400).json({ message: "Invalid user ID" });
     }

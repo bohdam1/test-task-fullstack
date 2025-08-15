@@ -15,12 +15,17 @@ const initialState: UserState = {
   profile: null,
 };
 
-// Отримати профіль
+
 export const getProfile = createAsyncThunk(
   "users/getProfile",
   async (_, { rejectWithValue }) => {
     try {
-      const res = await api.get("/users/profile");
+      const token = localStorage.getItem("accessToken");
+      const res = await api.get("/users/profile", {
+        headers: {
+          Authorization: token ? `Bearer ${token}` : "",
+        },
+      });
       return res.data; // { id, name, email }
     } catch (err: any) {
       return rejectWithValue(err.response?.data?.message || "Failed to fetch profile");
@@ -28,7 +33,6 @@ export const getProfile = createAsyncThunk(
   }
 );
 
-// Оновити профіль
 export const updateProfile = createAsyncThunk(
   "users/updateProfile",
   async (
@@ -36,7 +40,12 @@ export const updateProfile = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      const res = await api.put("/users/profile", data);
+      const token = localStorage.getItem("accessToken");
+      const res = await api.put("/users/profile", data, {
+        headers: {
+          Authorization: token ? `Bearer ${token}` : "",
+        },
+      });
       return res.data;
     } catch (err: any) {
       return rejectWithValue(err.response?.data?.message || "Failed to update profile");
